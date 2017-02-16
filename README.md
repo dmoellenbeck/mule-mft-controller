@@ -25,7 +25,7 @@ In addition it also also expose some basic functions such as:
 - List / Delete all completed transactions logs
 
 ### Configuration
-After importing the template into Anypoint Studio and add all the ***.jar** in the **resources** folder into the project **Build Path**, configure the properties file to match your environment. Below is an example of the controller properties file.
+After importing the template into Anypoint Studio and add all the **.jar** in the **resources** folder into the project **Build Path**, configure the properties file to match your environment. Below is an example of the controller properties file.
 ```sh
 # mft controller setting
 # ======================
