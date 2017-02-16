@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:ajax="http://www.mulesoft.org/schema/mule/ajax"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ajax http://www.mulesoft.org/schema/mule/ajax/current/mule-ajax.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <flow name="mft:get">
+        <set-variable variableName="type" value="#['GET']" doc:name="Set Type = 'GET'"/>
+        <flow-ref name="util:transfer" doc:name="util:transfer"/>
+    </flow>
+    <flow name="mft:put">
+        <set-variable variableName="type" value="#['PUT']" doc:name="Set Type = 'PUT'"/>
+        <flow-ref name="util:transfer" doc:name="util:transfer"/>
+    </flow>
+    <flow name="util:transfer">
+        <set-variable variableName="msgId" value="#[message.id]" doc:name="Generate Current msgId"/>
+        <enricher target="#[flowVars.node]" doc:name="node">
+            <processor-chain doc:name="Get Remote Node Metadata">
+                <objectstore:retrieve config-ref="nodesStore" key="#[message.inboundProperties.'http.query.params'.agentId]" doc:name="Extract Node Metadata"/>
+                <json:json-to-object-transformer returnClass="java.util.HashMap" mimeType="application/java" doc:name="JSON to Object"/>
+            </processor-chain>
+        </enricher>
+        <enricher target="#[flowVars.task]" doc:name="task">
+            <processor-chain doc:name="Processor Chain">
+                <dw:transform-message metadata:id="595fcb49-aeff-4e67-9e9b-3bb4089da151" doc:name="Create Task Request">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	file: inboundProperties."http.query.params".fileName,
+	id: flowVars.msgId,
+	lPath: inboundProperties."http.query.params".controllerPath,
+	nodeId: inboundProperties."http.query.params".agentId,
+	rPath: inboundProperties."http.query.params".agentPath,
+	remote: flowVars.node."displayname",
+	type: flowVars.type,
+	start: now as :string { format : "yyyy-MM-dd HH:mm:ss"},
+	s: lookup('util:nano',null)
+}]]></dw:set-payload>
+                </dw:transform-message>
+                <object-to-string-transformer doc:name="Object to String"/>
+            </processor-chain>
+        </enricher>
+        <objectstore:store config-ref="currentStore" key="#[flowVars.msgId]" value-ref="#[task]" overwrite="true" doc:name="Add Task to Current Store"/>
+        <flow-ref name="util:executeTask" doc:name="util:executeTask"/>
+        <set-payload value="{   &quot;code&quot; : &quot;00&quot;,  &quot;id&quot; : &quot;#[message.id]&quot;,  &quot;message&quot; : &quot;transfer completed&quot; }" doc:name="Transfer Completed"/>
+        <catch-exception-strategy doc:name="Catch Exception Strategy">
+            <set-payload value="#[exception.cause.message]" doc:name="Extract Exception Message"/>
+            <dw:transform-message doc:name="Create Error Log">
+                <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	id: flowVars.msgId,
+	message: payload
+}]]></dw:set-payload>
+            </dw:transform-message>
+            <object-to-string-transformer doc:name="Object to String"/>
+            <objectstore:store config-ref="errorStore" key="#[flowVars.msgId]" value-ref="#[payload]" overwrite="true" doc:name="Save Error"/>
+            <set-property propertyName="http.status" value="499" doc:name="HTTP 499"/>
+        </catch-exception-strategy>
+    </flow>
+    <flow name="mft:retry">
+        <objectstore:retrieve config-ref="currentStore" key="#[message.inboundProperties.'http.query.params'.id]" doc:name="Retrieve the erronous Task from Current" targetProperty="task"/>
+        <set-payload value="#[task]" doc:name="Copy Task to Payload"/>
+        <enricher target="#[flowVars.node]" doc:name="node">
+            <processor-chain doc:name="Get Remote Node Metadata">
+                <objectstore:retrieve config-ref="nodesStore" key="#[json:/nodeId]" doc:name="Extract Node Metadata"/>
+                <json:json-to-object-transformer returnClass="java.util.HashMap" mimeType="application/java" doc:name="JSON to Object"/>
+            </processor-chain>
+        </enricher>
+        <set-variable variableName="msgId" value="#[json:/id]" doc:name="Generate Current msgId"/>
+        <flow-ref name="util:executeTask" doc:name="util:executeTask"/>
+        <objectstore:remove config-ref="errorStore" key="#[flowVars.msgId]" ignoreNotExists="true" doc:name="Delete Error if Reply Successful"/>
+        <set-payload value="{   &quot;code&quot; : &quot;00&quot;,  &quot;id&quot; : &quot;#[flowVars.msgId]&quot;,  &quot;message&quot; : &quot;transfer completed&quot; }" doc:name="Transfer Completed"/>
+        <catch-exception-strategy doc:name="Catch Exception Strategy">
+            <set-payload value="#[exception.cause.message]" doc:name="Extract Exception Message"/>
+            <dw:transform-message doc:name="Create Error Log">
+                <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	id: flowVars.msgId,
+	message: payload
+}]]></dw:set-payload>
+            </dw:transform-message>
+            <object-to-string-transformer doc:name="Object to String"/>
+            <objectstore:store config-ref="errorStore" key="#[flowVars.msgId]" value-ref="#[payload]" overwrite="true" doc:name="Save Error"/>
+            <set-property propertyName="http.status" value="499" doc:name="HTTP 499"/>
+        </catch-exception-strategy>
+    </flow>
+    
+    <sub-flow name="util:executeTask">
+        <set-payload value="#[task]" doc:name="Save Task as Payload"/>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <set-variable variableName="root" value="${mft.root}" doc:name="Extract Root Directory"/>
+        <message-properties-transformer scope="invocation" doc:name="Prepare File Transfer Param">
+            <add-message-property key="msgid" value="#[payload.get('id')]"/>
+            <add-message-property key="fileName" value="#[payload.get('file')]"/>
+            <add-message-property key="server" value="#[node.hostname]"/>
+            <add-message-property key="port" value="#[node.port]"/>
+            <add-message-property key="secret" value="#[node.secret]"/>
+            <add-message-property key="lPath" value="#[flowVars.root+payload.get('lPath')]"/>
+            <add-message-property key="nodeName" value="#[node.displayname]"/>
+            <add-message-property key="rPath" value="#[node.agentroot+payload.get('rPath')]"/>
+            <add-message-property key="username" value="#[node.username]"/>
+        </message-properties-transformer>
+        <choice doc:name="Type=='GET'?">
+            <when expression="#[payload.type == 'GET']">
+                <custom-transformer class="com.mulesoft.template.mft.SftpGet" doc:name="Get File From Node"/>
+            </when>
+            <otherwise>
+                <custom-transformer class="com.mulesoft.template.mft.SftpPut" doc:name="Put File From Node"/>
+            </otherwise>
+        </choice>
+        <processor-chain doc:name="Finalize Transaction">
+            <objectstore:retrieve config-ref="currentStore" key="#[flowVars.msgid]" targetProperty="data" doc:name="Extract Current Task Info"/>
+            <objectstore:remove config-ref="currentStore" key="#[flowVars.msgid]" doc:name="Delete Task Info"/>
+            <dw:transform-message metadata:id="bfcb9a8a-6010-4970-bfff-13d7c9ce49d5" doc:name="Create Task Complete Log">
+                <dw:input-payload mimeType="application/json"/>
+                <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	e: lookup('util:nano', null),
+	end: now as :string {format : "yyyy-MM-dd HH:mm:ss"},
+	file: payload.file,
+	id: payload.id,
+	lPath: payload.lPath,
+	rPath: payload.rPath,
+	remote: payload.remote,
+	s: payload.s,
+	start: payload.start,
+	type: payload.type
+}]]></dw:set-payload>
+                <dw:set-variable variableName="done"><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	e: lookup('util:nano', null),
+	end: now as :string {format : "yyyy-MM-dd HH:mm:ss"},
+	file: payload.file,
+	fpath: payload.rPath,
+	from: payload.remote,
+	id: payload.id,
+	lPath: payload.lPath,
+	rPath: payload.rPath,
+	remote: payload.remote,
+	s: payload.s,
+	start: payload.start,
+	type: payload.type
+}]]></dw:set-variable>
+            </dw:transform-message>
+            <object-to-string-transformer doc:name="Object to String"/>
+            <objectstore:store config-ref="completedStore" key="#[flowVars.msgid]" value-ref="#[done]" overwrite="true" doc:name="Save Task Complete Log"/>
+        </processor-chain>
+    </sub-flow>
+
+    <flow name="util:nano">
+        <set-payload value="#[server.nanoTime()]" doc:name="Current Nanotime"/>
+    </flow>
+</mule>

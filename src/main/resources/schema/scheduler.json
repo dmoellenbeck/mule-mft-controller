@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "nodeId": {
+      "type": "string"
+    },
+    "lpath": {
+      "type": "string"
+    },
+    "rpath": {
+      "type": "string"
+    },
+    "file": {
+      "type": "string"
+    },
+    "next": {
+      "type": "string"
+    },
+    "repeat": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "nodeId",
+    "lpath",
+    "rpath",
+    "file",
+    "next",
+    "repeat"
+  ]
+}

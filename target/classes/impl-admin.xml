@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+    <flow name="admin:register">
+        <set-variable variableName="nodeId" value="#[function:uuid]" doc:name="Generate UUID"/>
+        <flow-ref name="util:upsert" doc:name="util:upsert"/>
+    </flow>
+    <flow name="admin:update">
+        <set-variable variableName="nodeId" value="#[message.inboundProperties.'http.query.params'.nodeId]" doc:name="Generate UUID"/>
+        <flow-ref name="util:upsert" doc:name="util:upsert"/>
+    </flow>
+    <sub-flow name="util:upsert">
+        <dw:transform-message metadata:id="5391c700-c514-42d9-8f74-6bc0ab273b8d" doc:name="Prepare Entry">
+            <dw:input-variable mimeType="application/java" variableName="nodeId"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	nodeId: flowVars.nodeId
+}]]></dw:set-payload>
+            <dw:set-variable variableName="entry"><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	nodeId: flowVars.nodeId,
+	hostname: inboundProperties.'http.query.params'.hostname,
+	port: inboundProperties.'http.query.params'.port,
+	username: inboundProperties.'http.query.params'.username,
+	secret: inboundProperties.'http.query.params'.secret,
+	displayname: inboundProperties.'http.query.params'.displayname,
+	agentroot: inboundProperties.'http.query.params'.agentroot,
+	created: now as :string {format : "yyyy-MM-dd HH:mm:ss"}
+}]]></dw:set-variable>
+        </dw:transform-message>
+        <objectstore:store config-ref="nodesStore" key="#[flowVars.nodeId]" value-ref="#[flowVars.entry]" overwrite="true" doc:name="Store Node Metadata Information"/>
+        <set-variable variableName="mftinput" value="${mft.agent.upload.dir}" doc:name="MFT Root"/>
+        <dw:transform-message doc:name="Create Result for Node">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	displayName: flowVars.entry.displayname,
+	nodeId: flowVars.entry.nodeId,
+	controllerRoot: flowVars.mftinput
+	
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </sub-flow>
+    <flow name="admin:unregister">
+        <objectstore:remove config-ref="nodesStore" key="#[message.inboundProperties.'http.query.params'.nodeId]" ignoreNotExists="true" doc:name="Delete Node Metadata"/>
+        <dw:transform-message doc:name="Create Result for Node">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	nodeId: inboundProperties."http.query.params".nodeId
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="admin:listNodes">
+        <objectstore:retrieve-all-keys config-ref="nodesStore" doc:name="Retrieve All Node ID"/>
+        <collection-splitter doc:name="Collection Splitter"/>
+        <objectstore:retrieve config-ref="nodesStore" key="#[payload]" doc:name="Extract Individual Node Info"/>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" mimeType="application/java" doc:name="JSON to Object"/>
+        <dw:transform-message doc:name="Filter out Sensitive Node Info">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+[{
+	displayname: payload.displayname,
+	agentroot: payload.agentroot,
+	nodeId: payload.nodeId,
+	hostname: payload.hostname,
+	port: payload.port
+}]]]></dw:set-payload>
+        </dw:transform-message>
+        <collection-aggregator failOnTimeout="true" doc:name="Collection Aggregator"/>
+        <dw:transform-message doc:name="Create Result">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+flatten payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="admin:deleteNodes">
+        <objectstore:retrieve-all-keys config-ref="nodesStore" doc:name="Retrieve All Node ID"/>
+        <collection-splitter doc:name="Collection Splitter"/>
+        <objectstore:remove config-ref="nodesStore" key="#[payload]" ignoreNotExists="true" doc:name="Delete Node Info"/>
+        <collection-aggregator failOnTimeout="true" doc:name="Collection Aggregator"/>
+        <set-payload value="{
+  &quot;message&quot; : &quot;All Nodes cleared&quot;
+}" doc:name="Create Result"/>
+    </flow>
+    <flow name="admin:listJobs">
+        <objectstore:retrieve-all-keys config-ref="scheduledStore" doc:name="Retrieve All Jobs"/>
+        <collection-splitter doc:name="Collection Splitter"/>
+        <objectstore:retrieve config-ref="scheduledStore" key="#[payload]" doc:name="Extract Job Info"/>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" mimeType="application/java" doc:name="JSON to Object"/>
+        <collection-aggregator failOnTimeout="true" doc:name="Collection Aggregator"/>
+        <dw:transform-message doc:name="Create Result">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="admin:deleteJobs">
+        <objectstore:retrieve-all-keys config-ref="scheduledStore" doc:name="Retrieve All Jobs"/>
+        <collection-splitter doc:name="Collection Splitter"/>
+        <objectstore:remove config-ref="scheduledStore" key="#[payload]" ignoreNotExists="true" doc:name="Delete Job"/>
+        <collection-aggregator failOnTimeout="true" doc:name="Collection Aggregator"/>
+        <set-payload value="{
+  &quot;message&quot; : &quot;All Jobs cleared&quot;
+}" doc:name="Create Result"/>
+    </flow>
+    <flow name="admin:completedJSON">
+        <objectstore:retrieve-all-keys config-ref="completedStore" doc:name="Retrieve All Completed Task ID"/>
+        <collection-splitter doc:name="Collection Splitter"/>
+        <objectstore:retrieve config-ref="completedStore" key="#[payload]" doc:name="Extract each completion detail"/>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" mimeType="application/java" doc:name="JSON to Object"/>
+        <collection-aggregator failOnTimeout="true" doc:name="Collection Aggregator"/>
+        <dw:transform-message doc:name="Create Result">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="admin:deleteCompleted">
+        <objectstore:retrieve-all-keys config-ref="completedStore" doc:name="Retrieve All Completed Task ID"/>
+        <collection-splitter doc:name="Collection Splitter"/>
+        <objectstore:remove config-ref="completedStore" key="#[payload]" ignoreNotExists="true" doc:name="Delete Completed Task Info"/>
+        <collection-aggregator failOnTimeout="true" doc:name="Collection Aggregator"/>
+        <set-payload value="{
+  &quot;message&quot; : &quot;Completed Transactions Log cleared&quot;
+}" doc:name="Create Result"/>
+    </flow>
+    <flow name="admin:currentJSON">
+        <objectstore:retrieve-all-keys config-ref="currentStore" doc:name="Retrieve All Current Task ID"/>
+        <collection-splitter doc:name="Collection Splitter"/>
+        <objectstore:retrieve config-ref="currentStore" key="#[payload]" doc:name="Retrieve Current Task Info"/>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" mimeType="application/java" doc:name="JSON to Object"/>
+        <collection-aggregator failOnTimeout="true" doc:name="Collection Aggregator"/>
+        <dw:transform-message doc:name="Create Result">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="admin:listError">
+        <objectstore:retrieve-all-keys config-ref="errorStore" doc:name="Retrieve All Error ID"/>
+        <collection-splitter doc:name="Collection Splitter"/>
+        <scatter-gather doc:name="Scatter-Gather">
+            <processor-chain>
+                <objectstore:retrieve config-ref="errorStore" key="#[payload]" doc:name="Retrieve Error Detail" defaultValue-ref="{&quot;type&quot; : &quot;n/a&quot;, &quot;remote&quot; : &quot;n/a&quot;, &quot;lPath&quot; : &quot;n/a&quot;, &quot;rPath&quot; : &quot;n/a&quot;, &quot;file&quot; : &quot;n/a&quot;}"/>
+                <json:json-to-object-transformer returnClass="java.util.HashMap" mimeType="application/java" doc:name="JSON to Object"/>
+            </processor-chain>
+            <processor-chain>
+                <objectstore:retrieve config-ref="currentStore" key="#[payload]" doc:name="Retrieve Task Detail"/>
+                <json:json-to-object-transformer doc:name="JSON to Object"/>
+            </processor-chain>
+        </scatter-gather>
+        <dw:transform-message doc:name="Merge Info">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+%var error = payload[0]
+%var task = payload[1]
+---
+{
+	id: error.id,
+	message: error.message,
+	start: task.start,
+	task: {
+		type: task.type,
+		remote: task.remote,
+		file: task.file,
+		lPath: task.lPath,
+		rPath: task.rPath
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <collection-aggregator failOnTimeout="true" doc:name="Collection Aggregator"/>
+        <dw:transform-message doc:name="Create Result">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+</mule>

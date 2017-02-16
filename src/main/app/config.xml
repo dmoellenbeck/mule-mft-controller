@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:context="http://www.springframework.org/schema/context" xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:ajax="http://www.mulesoft.org/schema/mule/ajax"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ajax http://www.mulesoft.org/schema/mule/ajax/current/mule-ajax.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd">
+    <context:property-placeholder location="mft-controller.${mule.env}.properties"/>
+
+    <objectstore:config name="nodesStore" partition="nodes" persistent="${store.metadata.persistence}" doc:name="ObjectStore: Connector"/>
+    <objectstore:config name="currentStore" partition="current" persistent="${store.current.persistence}" doc:name="ObjectStore: Configuration" />
+    <objectstore:config name="completedStore" partition="complete" persistent="${store.completed.persistence}" doc:name="ObjectStore: Configuration" />
+    <objectstore:config name="errorStore" partition="error" persistent="${store.error.persistence}" doc:name="ObjectStore: Configuration" />
+    <objectstore:config name="scheduledStore" partition="scheduledStore" persistent="${store.jobs.persistence}" doc:name="ObjectStore: Configuration"/>
+
+</mule>

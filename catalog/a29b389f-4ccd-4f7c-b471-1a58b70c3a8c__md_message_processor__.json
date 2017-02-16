@@ -1,0 +1,22 @@
+{
+    "inputMessageMetadata": {
+        "flowVariables": {
+            "msgId": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "String"
+            },
+            "type": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "String"
+            }
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "scheduler"
+        }
+    },
+    "id": "a29b389f-4ccd-4f7c-b471-1a58b70c3a8c",
+    "version": "5.2.0.0"
+}

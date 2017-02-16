@@ -1,0 +1,26 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "scheduler"
+        },
+        "flowVariables": {
+            "msgId": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "String"
+            },
+            "newNext": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "String"
+            }
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "scheduler"
+        }
+    },
+    "id": "7c7b6aad-08cf-4fa8-bdb3-ff283c82450f",
+    "version": "5.2.0.0"
+}

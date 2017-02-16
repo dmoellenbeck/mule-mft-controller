@@ -1,0 +1,430 @@
+#%RAML 0.8
+---
+title: MFT Controller API
+version: 0.2
+baseUri: http://localhost:8082/mft
+
+/manage:
+  /node:
+    get:
+      responses:
+        200: 
+          body: 
+            application/json: 
+              example: |
+                [
+                  {
+                    "nodeId" : "asd",
+                    "hostname" : "name",
+                    "port" : "1234"
+                  }
+                ]
+    delete:
+      responses:
+        200: 
+          body:
+            application/json: 
+              example: |
+                {
+                  "message" : "All Nodes cleared"
+                }                    
+  /current:
+    get:
+      responses:
+        200: 
+          body: 
+            application/json: 
+              example: |
+                [
+                  {
+                    "nodeId" : "asd",
+                    "hostname" : "name",
+                    "port" : "1234"
+                  }
+                ] 
+  /completed:
+    get:
+      responses:
+        200: 
+          body: 
+            application/json: 
+              example: |
+                [
+                  {
+                    "next": "2017-03-09 16:12:00",
+                    "file": "media1.mp4",
+                    "lpath": "/Users/mule/Desktop/mft/central",
+                    "repeat": 1,
+                    "id": "c37e1d20-eecc-11e6-8f7b-7831c1bf2dec",
+                    "type": "PUT",
+                    "nodeId": "b652d910-ee86-11e6-b145-ac87a333d25c",
+                    "rpath": "/lob1"
+                  },
+                  {
+                    "next": "2017-03-09 16:12:00",
+                    "file": "narrative.txt",
+                    "lpath": "/Users/mule/Desktop/mft/central/inbox",
+                    "repeat": 60,
+                    "id": "bab80520-eecc-11e6-8f7b-7831c1bf2dec",
+                    "type": "GET",
+                    "nodeId": "b652d910-ee86-11e6-b145-ac87a333d25c",
+                    "rpath": "/lob1"
+                  }
+                ]
+
+    delete:
+      responses:
+        200: 
+          body:
+            application/json: 
+              example: |
+                {
+                  "message" : "Completed Transactions Log cleared"
+                }                               
+  /job:
+    get:
+      responses:
+        200: 
+          body: 
+            application/json: 
+              example: |
+                [
+                  {
+                    "nodeId" : "asd",
+                    "hostname" : "name",
+                    "port" : "1234"
+                  }
+                ]
+    delete:
+      responses:
+        200: 
+          body:
+            application/json: 
+              example: |
+                {
+                  "message" : "All Job cleared"
+                }                                     
+  /error:
+    get:
+      responses:
+        200: 
+          body: 
+            application/json: 
+              example: |
+                [
+                  {
+                    "id" : "asd",
+                    "message" : "name"
+                  }
+                ]                  
+/admin:
+  /node:
+    post:
+      queryParameters:
+        hostname:
+          type: string
+          required: true
+        port:
+          type: string
+          required: true
+        username:
+          type: string
+          required: true
+        secret:
+          type: string
+          required: true
+        displayname:
+          type: string
+          required: true
+        agentroot:
+          type: string
+          required: true
+      responses:
+        200: 
+          body: 
+            application/json: 
+              example: |
+                {
+                  "displayName" : "server name",
+                  "nodeId" : "abcd",
+                  "controllerRoot" : "default path name"
+                  
+                }
+    put:
+      queryParameters:
+        nodeId:
+          type: string
+          required: true         
+        hostname:
+          type: string
+          required: true
+        port:
+          type: string
+          required: true
+        username:
+          type: string
+          required: true
+        secret:
+          type: string
+          required: true
+        displayname:
+          type: string
+          required: true
+        agentroot:
+          type: string
+          required: true
+      responses:
+        200: 
+          body: 
+            application/json: 
+              example: |
+                {
+                  "displayName" : "server name",
+                  "nodeId" : "abcd",
+                  "controllerRoot" : "default path name"                  
+                }
+    delete:
+      queryParameters:
+        nodeId:
+          type: string
+          required: true         
+      responses:
+        200: 
+          body: 
+            application/json: 
+              example: |
+                {
+                  "nodeId" : "servername"
+                }            
+
+/operation:
+  /file:
+    get: 
+      queryParameters: 
+        agentId:
+          type: string
+          required: true
+        agentPath:
+          type: string
+        fileName:
+          type: string
+          required: true          
+        controllerPath:
+          type: string
+      responses: 
+        200:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "code" : "00",
+                  "id" : "1234",
+                  "message" : "transfer completed"
+                }
+        499:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "id" : "asd",
+                  "message" : "name"
+                }
+    put: 
+      queryParameters: 
+        agentId:
+          type: string
+          required: true
+        agentPath:
+          type: string
+        fileName:
+          type: string
+          required: true          
+        controllerPath:
+          type: string
+      responses: 
+        200:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "code" : "00",
+                  "id" : "1234",
+                  "message" : "transfer completed"
+                }
+        499:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "id" : "asd",
+                  "message" : "name"
+                }
+    patch:
+      queryParameters: 
+        id:
+          type: string
+          required: true
+      responses: 
+        200:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "code" : "00",
+                  "id" : "1234",
+                  "message" : "transfer completed"
+                }
+        499:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "id" : "asd",
+                  "message" : "name"
+                } 
+                                    
+/scheduled:
+  /file:
+    get: 
+      queryParameters: 
+        agentId:
+          type: string
+          required: true
+        agentPath:
+          type: string
+        fileName:
+          type: string
+          required: true          
+        controllerPath:
+          type: string
+        nextJob:
+          type: string
+          required: true
+          default: 2016-01-01 00:00:00+0800
+          example: YYYY-MM-DD HH:MI:SSZ
+        repeat:
+          type: number
+          required: true
+          default: 0
+          example: 0        
+      responses: 
+        200:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "id" : "asdasdas",
+                  "message" : "task submitted"
+                }     
+        499:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "id" : "-1",
+                  "message" : "Server Not Defined"
+                } 
+    put:
+      queryParameters: 
+        agentId:
+          type: string
+          required: true
+        agentPath:
+          type: string
+        fileName:
+          type: string
+          required: true          
+        controllerPath:
+          type: string
+        nextJob:
+          type: string
+          required: true
+          default: 2016-01-01 00:00:00
+          example: YYYY-MM-DD HH:MI:SS
+        repeat:
+          type: number
+          required: true
+          default: 0
+          example: 0        
+      responses: 
+        200:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "id" : "abcd",
+                  "message" : "task submitted"
+                }       
+        499:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "id" : "-1",
+                  "message" : "Server Not Defined"
+                }        
+    delete: 
+      queryParameters: 
+        id:
+          type: string
+          required: true
+        next:
+          type: string
+          required: true
+          default: 2016-01-01 00:00:00
+          example: YYYY-MM-DD HH:MI:SS
+      responses: 
+        200:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "message" : "job cancelled"
+                }                         
+        499:
+          body: 
+            application/json: 
+              example: |
+                {
+                  "message" : "invalid job detail"
+                }   
+/api:
+  /upload:
+    post:
+      description: |
+         Enters the file content for an existing song entity.
+         Use the "binary/octet-stream" content type to specify the content from any consumer (excepting web-browsers).
+         Use the "multipart-form/data" content type to upload a file which content will become the file-content
+      body:  
+        binary/octet-stream:
+          formParameters:
+            dest:
+              description: destination
+              required: true
+              type: string
+            file:
+              description: The file to be uploaded
+              required: true
+              type: file
+        multipart/form-data:
+          formParameters:
+            dest:
+              description: destination
+              required: true
+              type: string
+            file:
+              description: The file to be uploaded
+              required: true
+              type: file
+      responses: 
+        200:
+          body: 
+            application/json: 
+              example: |
+                {"status" : "uploaded"}
+        499:
+          body: 
+            application/json: 
+              example: |
+                {"status" : "error"}
+                        

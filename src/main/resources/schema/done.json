@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "remote": {
+      "type": "string"
+    },
+    "rPath": {
+      "type": "string"
+    },
+    "lPath": {
+      "type": "string"
+    },
+    "file": {
+      "type": "string"
+    },
+    "start": {
+      "type": "string"
+    },
+    "s": {
+      "type": "integer"
+    },
+    "end": {
+      "type": "string"
+    },
+    "e": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "remote",
+    "rPath",
+    "lPath",
+    "file",
+    "start",
+    "s",
+    "end",
+    "e"
+  ]
+}
